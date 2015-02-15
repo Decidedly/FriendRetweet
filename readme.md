@@ -20,6 +20,7 @@ Download the script here: https://github.com/Decidedly/FriendRetweet
     | `twitter_user_id` | Your numeric Twitter User id. |
     | `memory_filename` | A path to the file where your user's data will be stored. These files don't generally get very big. |
     | `native_retweets` | A value of **true** causes native tweets, a values of **false** causes us to simply tweet the same text as the source tweet. |
+    | `grab_tweets_since_last_run` | A value of **true** causes only tweets since the last time the app was run to be considered for retweets. Otherwise, all tweets in timeline will be considered. |
 
 ## Running the App
 

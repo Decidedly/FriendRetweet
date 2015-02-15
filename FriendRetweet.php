@@ -11,6 +11,7 @@ class FriendRetweet {
 	var $twitterUserId;
 	var $memoryFilename;
 	var $nativeRetweets;
+	var $grabTweetsSinceLastRun;
 
 	// State variables
 	var $retweetThreshold;
@@ -18,7 +19,9 @@ class FriendRetweet {
 	var $pastRetweets;
 
 	function __construct() {
+		$this->mostRecentTweetId = null;
 		$this->pastRetweets = array();
+		$grabTweetsSinceLastRun = true;
 	}
 
 
@@ -83,6 +86,9 @@ class FriendRetweet {
 		$this->memoryFilename = $config->memory_filename;
 		$this->retweetThreshold = $config->retweet_threshold;
 		$this->nativeRetweets = $config->native_retweets;
+
+		if(isset($config->grab_tweets_since_last_run))
+			$this->grabTweetsSinceLastRun = $config->grab_tweets_since_last_run;
 	
 		return;
 	}
@@ -133,7 +139,7 @@ class FriendRetweet {
 			"exclude_replies" => true,
 			"include_rts" => true);
 
-		if(!empty($this->mostRecentTweetId)) {
+		if(!empty($this->mostRecentTweetId) && $this->grabTweetsSinceLastRun) {
 			$params["since_id"] = $this->mostRecentTweetId;
 		}
 		
@@ -152,7 +158,6 @@ class FriendRetweet {
 					}
 				}
 
-				// $text = html_entity_decode($tweet->text, ENT_NOQUOTES);
 				if($this->verbose) {
 					echo $text . "\n";
 				}
