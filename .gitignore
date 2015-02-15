@@ -1,0 +1,12 @@
+# Composer vendors directory
+/vendor/
+# Sublime SFTP configs
+sftp-config.json
+# Sublime Text projects
+*.sublime-*
+# App configs
+*.config
+# Except the sample config
+!/settings/example.config
+# App data directory contents
+/data/*
