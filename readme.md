@@ -21,6 +21,7 @@ Download the script here: https://github.com/Decidedly/FriendRetweet
     | `memory_filename` | A path to the file where your user's data will be stored. These files don't generally get very big. |
     | `native_retweets` | A value of **true** causes native tweets, a values of **false** causes us to simply tweet the same text as the source tweet. |
     | `grab_tweets_since_last_run` | A value of **true** causes only tweets since the last time the app was run to be considered for retweets. Otherwise, all tweets in timeline will be considered. |
+    | `include_friends_retweets` | A value of **false** causes only tweets by people we follow to be considered, but does exclude items that they themselves retweeted (ie things that they didn't post themselves). |
 
 ## Running the App
 

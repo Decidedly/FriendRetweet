@@ -12,6 +12,7 @@ class FriendRetweet {
 	var $memoryFilename;
 	var $nativeRetweets;
 	var $grabTweetsSinceLastRun;
+	var $includeFriendRetweets;
 
 	// State variables
 	var $retweetThreshold;
@@ -21,7 +22,8 @@ class FriendRetweet {
 	function __construct() {
 		$this->mostRecentTweetId = null;
 		$this->pastRetweets = array();
-		$grabTweetsSinceLastRun = true;
+		$this->grabTweetsSinceLastRun = true;
+		$this->includeFriendRetweets = true;
 	}
 
 
@@ -89,6 +91,9 @@ class FriendRetweet {
 
 		if(isset($config->grab_tweets_since_last_run))
 			$this->grabTweetsSinceLastRun = $config->grab_tweets_since_last_run;
+
+		if(isset($config->include_friends_retweets))
+			$this->includeFriendRetweets = $config->include_friends_retweets;
 	
 		return;
 	}
@@ -136,8 +141,9 @@ class FriendRetweet {
 			"count" => 200, 
 			"trim_user" => true, 
 			"lang" => "en",
-			"exclude_replies" => true,
-			"include_rts" => true);
+			"exclude_replies" => true);
+
+		$params['include_rts'] = $this->includeFriendRetweets;
 
 		if(!empty($this->mostRecentTweetId) && $this->grabTweetsSinceLastRun) {
 			$params["since_id"] = $this->mostRecentTweetId;
