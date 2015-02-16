@@ -1,5 +1,5 @@
 # FriendRetweet
-**FriendRetweet** is a command-line PHP script that allows you to automatically retweet the most popular tweets of the people you're following. Each time it is run, the app will scan your users home timeline and find the most popular tweet since the last time it was run. It will then retweet that tweet.
+**FriendRetweet** is a command-line PHP script that allows you to automatically retweet the most popular tweets of the people you're following. Each time the app is run, it will scan your home timeline and retweet the most popular tweet since the last time it was run. Settings options exist to allow it to use old-school retweets instead of new retweets, as well as to go back as far in time as Twitter API will let us.
 
 ## Download
 
