@@ -1,5 +1,6 @@
 {
     "name": "decidedly/friend-retweet",
+    "version":"1.0.4",
     "description": "Automatically retweet tweets of the people we're following",
     "license": "MIT",
     "authors": [
@@ -9,7 +10,7 @@
         }
     ],
     "require": {
-        "abraham/twitteroauth": "0.4.*",
+        "abraham/twitteroauth": "0.5.*",
         "wp-cli/php-cli-tools": "0.10.*"
     },
     "autoload": {
