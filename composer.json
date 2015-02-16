@@ -1,15 +1,18 @@
 {
     "name": "decidedly/friend-retweet",
     "description": "Automatically retweet tweets of the people we're following",
-    "require": {
-        "abraham/twitteroauth": "0.4.*",
-        "wp-cli/php-cli-tools": "0.10.*"
-    },
     "license": "MIT",
     "authors": [
         {
             "name": "David Hilowitz",
             "email": "dhilowitz@gmail.com"
         }
-    ]
+    ],
+    "require": {
+        "abraham/twitteroauth": "0.4.*",
+        "wp-cli/php-cli-tools": "0.10.*"
+    },
+    "autoload": {
+        "psr-4": {"Decidedly\\": "src/Decidedly"}
+    }
 }
