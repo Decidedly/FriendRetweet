@@ -13,6 +13,7 @@ class FriendRetweet {
 	var $nativeRetweets;
 	var $grabTweetsSinceLastRun;
 	var $includeFriendRetweets;
+	var $enabled;
 
 	// State variables
 	var $mostRecentTweetId;
@@ -25,6 +26,7 @@ class FriendRetweet {
 		$this->grabTweetsSinceLastRun = true;
 		$this->includeFriendRetweets = true;
 		$this->verbose = false;
+		$this->enabled = true;
 	}
 
 	function parseConfig($configFileName) {
@@ -64,6 +66,9 @@ class FriendRetweet {
 
 		if(isset($config->include_friends_retweets))
 			$this->includeFriendRetweets = $config->include_friends_retweets;
+
+		if(isset($config->enabled))
+			$this->enabled = $config->enabled;
 	
 		return;
 	}
@@ -94,6 +99,7 @@ class FriendRetweet {
 		$configObject->native_retweets = $this->nativeRetweets;
 		$configObject->grab_tweets_since_last_run = $this->grabTweetsSinceLastRun;
 		$configObject->include_friends_retweets = $this->includeFriendRetweets;
+		$configObject->enabled = $this->enabled;
 
 		$configJson = json_encode($configObject, JSON_PRETTY_PRINT);
 		$result = file_put_contents($configFileName, $configJson);
@@ -156,7 +162,7 @@ class FriendRetweet {
 				}
 
 				if($this->verbose) {
-					echo $text . "\n";
+					echo "Tweet: " . $tweet->text . "\n";
 				}
 				
 				$tweets[] = $tweet;
@@ -219,6 +225,10 @@ class FriendRetweet {
 	}
 
 	public function run() {
+		if(!$this->enabled) {
+			return;
+		}
+
 		$this->twitter = new \Abraham\TwitterOAuth\TwitterOAuth(
 			$this->twitterConsumerKey, 
 			$this->twitterConsumerSecret, 
