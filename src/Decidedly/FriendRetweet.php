@@ -14,10 +14,13 @@ class FriendRetweet {
 	var $grabTweetsSinceLastRun;
 	var $includeFriendRetweets;
 	var $enabled;
+	var $grabTweetsFromListId;
+	var $filterOutTweetsWithoutUrls;
 
 	// State variables
 	var $mostRecentTweetId;
 	var $pastRetweets;
+	var $lastRunTime;
 	var $verbose;
 
 	function __construct() {
@@ -27,6 +30,8 @@ class FriendRetweet {
 		$this->includeFriendRetweets = true;
 		$this->verbose = false;
 		$this->enabled = true;
+		$this->lastRunTime = 0;
+		$this->runFrequency = 3600;
 	}
 
 	function parseConfig($configFileName) {
@@ -61,14 +66,29 @@ class FriendRetweet {
 		$this->memoryFilename = $config->memory_filename;
 		$this->nativeRetweets = $config->native_retweets;
 
-		if(isset($config->grab_tweets_since_last_run))
+		if(isset($config->grab_tweets_since_last_run)) {
 			$this->grabTweetsSinceLastRun = $config->grab_tweets_since_last_run;
+		}
 
-		if(isset($config->include_friends_retweets))
+		if(isset($config->include_friends_retweets)) {
 			$this->includeFriendRetweets = $config->include_friends_retweets;
+		}
 
-		if(isset($config->enabled))
+		if(isset($config->grab_tweets_from_list_id)) {
+			$this->grabTweetsFromListId = $config->grab_tweets_from_list_id;
+		}
+
+		if(isset($config->run_frequency)) {
+			$this->runFrequency = $config->run_frequency;
+		}
+
+		if(isset($config->filter_out_tweets_without_urls)) {
+			$this->filterOutTweetsWithoutUrls = $config->filter_out_tweets_without_urls;
+		}
+
+		if(isset($config->enabled)) {
 			$this->enabled = $config->enabled;
+		}
 	
 		return;
 	}
@@ -99,6 +119,9 @@ class FriendRetweet {
 		$configObject->native_retweets = $this->nativeRetweets;
 		$configObject->grab_tweets_since_last_run = $this->grabTweetsSinceLastRun;
 		$configObject->include_friends_retweets = $this->includeFriendRetweets;
+		$configObject->grab_tweets_from_list_id = $this->grabTweetsFromListId;
+		$configObject->run_frequency = $this->runFrequency;
+		$configObject->filter_out_tweets_without_urls = $this->filterOutTweetsWithoutUrls;
 		$configObject->enabled = $this->enabled;
 
 		$configJson = json_encode($configObject, JSON_PRETTY_PRINT);
@@ -130,15 +153,33 @@ class FriendRetweet {
 
 		if(!empty($memory->mostRecentTweetId))
 		    $this->mostRecentTweetId = $memory->mostRecentTweetId;
+
+		if(!empty($memory->lastRunTime))
+		    $this->lastRunTime = $memory->lastRunTime;
 	}
 
 	public function grabTweets() {
 		$tweets = array();
 		$params = array(
-			"count" => 200, 
-			"trim_user" => true, 
-			"lang" => "en",
-			"exclude_replies" => true);
+			"count" => 200
+		);
+
+		if(!empty($this->grabTweetsFromListId)) {
+			$apiCallName = 'lists/statuses';
+			if($this->verbose) {
+				echo "Pulling from a list.\n";
+			}
+			$params['list_id'] = $this->grabTweetsFromListId;
+		} else {
+			// We are grabbing from home timeline
+			$apiCallName = 'statuses/home_timeline';
+			if($this->verbose) {
+				echo "Pulling from our home timeline.\n";
+			}
+			$params['trim_user'] = true;
+			$params['lang'] = 'en';
+			$params['exclude_replies'] = 'true';
+		}
 
 		$params['include_rts'] = $this->includeFriendRetweets;
 
@@ -146,26 +187,43 @@ class FriendRetweet {
 			$params["since_id"] = $this->mostRecentTweetId;
 		}
 		
-		$searchResults = $this->twitter->get("statuses/home_timeline", $params);
+		$searchResults = $this->twitter->get($apiCallName, $params);
 
 		$counter = 0;
 		
 		while($searchResults && is_array($searchResults) && count($searchResults) > 0) {
 			foreach($searchResults as $tweet) {
+				$rejectTweet = false;
 				if(defined('TWITTER_USER_ID')) {
 					if($tweet->user->id == TWITTER_USER_ID) {
 						if($this->verbose) {
 							echo "Skipping our own tweet (user id {$tweet->user->id} matches ". TWITTER_USER_ID . "): " . $tweet->text . "\n";
 						}
-						continue;
+						$rejectTweet = true;
 					}
 				}
 
-				if($this->verbose) {
-					echo "Tweet: " . $tweet->text . "\n";
+				if($this->filterOutTweetsWithoutUrls) {
+					$hasLink = strstr($tweet->text, 'http://');
+
+					if(!$hasLink)
+					{
+						if($this->verbose) {
+							echo "Rejecting this tweet because it doesn't have a URL: {$tweet->text}\n";
+						}
+						$rejectTweet = true;
+					}
+				}
+
+
+
+				if(!$rejectTweet) {
+					if($this->verbose) {
+						echo $tweet->text . "\n";
+					}
+					$tweets[] = $tweet;
 				}
 				
-				$tweets[] = $tweet;
 				$counter++;
 				$this->mostRecentTweetId = max($tweet->id, $this->mostRecentTweetId);
 				$lastTweetId = $tweet->id;
@@ -212,6 +270,7 @@ class FriendRetweet {
 		$memory = new \stdClass;
 		$memory->pastRetweets = $this->pastRetweets;
 		$memory->mostRecentTweetId = $this->mostRecentTweetId;
+		$memory->lastRunTime = time();
 
 		while(count($memory->pastRetweets) > 100) {
 			array_shift($memory->pastRetweets);
@@ -229,13 +288,21 @@ class FriendRetweet {
 			return;
 		}
 
+		$this->loadSavedState();
+
+		$now = time();
+
+		if($now - $this->lastRunTime < $this->runFrequency) {
+			if($this->verbose) 
+				echo "Exiting because it hasn't been long enough since we last ran.\n";
+			return;
+		}
+
 		$this->twitter = new \Abraham\TwitterOAuth\TwitterOAuth(
 			$this->twitterConsumerKey, 
 			$this->twitterConsumerSecret, 
 			$this->twitterAccessToken, 
 			$this->twitterAccessTokenSecret);
-
-		$this->loadSavedState();
 
 		$tweets = $this->grabTweets();
 		if($this->verbose) 
