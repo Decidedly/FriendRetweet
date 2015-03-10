@@ -18,6 +18,7 @@ class FriendRetweet {
 	// State variables
 	var $mostRecentTweetId;
 	var $pastRetweets;
+	var $lastRunTime;
 	var $verbose;
 
 	function __construct() {
@@ -26,6 +27,8 @@ class FriendRetweet {
 		$this->grabTweetsSinceLastRun = true;
 		$this->includeFriendRetweets = true;
 		$this->verbose = false;
+		$this->lastRunTime = 0;
+		$this->runFrequency = 3600;
 	}
 
 	function parseConfig($configFileName) {
@@ -60,14 +63,20 @@ class FriendRetweet {
 		$this->memoryFilename = $config->memory_filename;
 		$this->nativeRetweets = $config->native_retweets;
 
-		if(isset($config->grab_tweets_since_last_run))
+		if(isset($config->grab_tweets_since_last_run)) {
 			$this->grabTweetsSinceLastRun = $config->grab_tweets_since_last_run;
+		}
 
-		if(isset($config->include_friends_retweets))
+		if(isset($config->include_friends_retweets)) {
 			$this->includeFriendRetweets = $config->include_friends_retweets;
+		}
 
 		if(isset($config->grab_tweets_from_list_id)) {
 			$this->grabTweetsFromListId = $config->grab_tweets_from_list_id;
+		}
+
+		if(isset($config->run_frequency)) {
+			$this->runFrequency = $config->run_frequency;
 		}
 	
 		return;
@@ -130,6 +139,9 @@ class FriendRetweet {
 
 		if(!empty($memory->mostRecentTweetId))
 		    $this->mostRecentTweetId = $memory->mostRecentTweetId;
+
+		if(!empty($memory->lastRunTime))
+		    $this->lastRunTime = $memory->lastRunTime;
 	}
 
 	public function grabTweets() {
@@ -177,7 +189,7 @@ class FriendRetweet {
 				}
 
 				if($this->verbose) {
-					echo $tweet->$text . "\n";
+					echo $tweet->text . "\n";
 				}
 				
 				$tweets[] = $tweet;
@@ -227,6 +239,7 @@ class FriendRetweet {
 		$memory = new \stdClass;
 		$memory->pastRetweets = $this->pastRetweets;
 		$memory->mostRecentTweetId = $this->mostRecentTweetId;
+		$memory->lastRunTime = time();
 
 		while(count($memory->pastRetweets) > 100) {
 			array_shift($memory->pastRetweets);
@@ -240,13 +253,23 @@ class FriendRetweet {
 	}
 
 	public function run() {
+
+
+		$this->loadSavedState();
+
+		$now = time();
+
+		if($now - $this->lastRunTime < $this->runFrequency) {
+			if($this->verbose) 
+				echo "Exiting because it hasn't been long enough since we last ran.\n";
+			return;
+		}
+
 		$this->twitter = new \Abraham\TwitterOAuth\TwitterOAuth(
 			$this->twitterConsumerKey, 
 			$this->twitterConsumerSecret, 
 			$this->twitterAccessToken, 
 			$this->twitterAccessTokenSecret);
-
-		$this->loadSavedState();
 
 		$tweets = $this->grabTweets();
 		if($this->verbose) 
