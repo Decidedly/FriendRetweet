@@ -14,6 +14,7 @@ class FriendRetweet {
 	var $grabTweetsSinceLastRun;
 	var $includeFriendRetweets;
 	var $grabTweetsFromListId;
+	var $filterOutTweetsWithoutUrls;
 
 	// State variables
 	var $mostRecentTweetId;
@@ -78,6 +79,10 @@ class FriendRetweet {
 		if(isset($config->run_frequency)) {
 			$this->runFrequency = $config->run_frequency;
 		}
+
+		if(isset($config->filter_out_tweets_without_urls)) {
+			$this->filterOutTweetsWithoutUrls = $config->filter_out_tweets_without_urls;
+		}
 	
 		return;
 	}
@@ -109,6 +114,8 @@ class FriendRetweet {
 		$configObject->grab_tweets_since_last_run = $this->grabTweetsSinceLastRun;
 		$configObject->include_friends_retweets = $this->includeFriendRetweets;
 		$configObject->grab_tweets_from_list_id = $this->grabTweetsFromListId;
+		$configObject->run_frequency = $this->runFrequency;
+		$configObject->filter_out_tweets_without_urls = $this->filterOutTweetsWithoutUrls;
 
 		$configJson = json_encode($configObject, JSON_PRETTY_PRINT);
 		$result = file_put_contents($configFileName, $configJson);
@@ -179,20 +186,37 @@ class FriendRetweet {
 		
 		while($searchResults && is_array($searchResults) && count($searchResults) > 0) {
 			foreach($searchResults as $tweet) {
+				$rejectTweet = false;
 				if(defined('TWITTER_USER_ID')) {
 					if($tweet->user->id == TWITTER_USER_ID) {
 						if($this->verbose) {
 							echo "Skipping our own tweet (user id {$tweet->user->id} matches ". TWITTER_USER_ID . "): " . $tweet->text . "\n";
 						}
-						continue;
+						$rejectTweet = true;
 					}
 				}
 
-				if($this->verbose) {
-					echo $tweet->text . "\n";
+				if($this->filterOutTweetsWithoutUrls) {
+					$hasLink = strstr($tweet->text, 'http://');
+
+					if(!$hasLink)
+					{
+						if($this->verbose) {
+							echo "Rejecting this tweet because it doesn't have a URL: {$tweet->text}\n";
+						}
+						$rejectTweet = true;
+					}
+				}
+
+
+
+				if(!$rejectTweet) {
+					if($this->verbose) {
+						echo $tweet->text . "\n";
+					}
+					$tweets[] = $tweet;
 				}
 				
-				$tweets[] = $tweet;
 				$counter++;
 				$this->mostRecentTweetId = max($tweet->id, $this->mostRecentTweetId);
 				$lastTweetId = $tweet->id;
