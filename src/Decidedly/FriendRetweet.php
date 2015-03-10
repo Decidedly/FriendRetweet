@@ -13,6 +13,7 @@ class FriendRetweet {
 	var $nativeRetweets;
 	var $grabTweetsSinceLastRun;
 	var $includeFriendRetweets;
+	var $grabTweetsFromListId;
 
 	// State variables
 	var $mostRecentTweetId;
@@ -64,6 +65,10 @@ class FriendRetweet {
 
 		if(isset($config->include_friends_retweets))
 			$this->includeFriendRetweets = $config->include_friends_retweets;
+
+		if(isset($config->grab_tweets_from_list_id)) {
+			$this->grabTweetsFromListId = $config->grab_tweets_from_list_id;
+		}
 	
 		return;
 	}
@@ -94,6 +99,7 @@ class FriendRetweet {
 		$configObject->native_retweets = $this->nativeRetweets;
 		$configObject->grab_tweets_since_last_run = $this->grabTweetsSinceLastRun;
 		$configObject->include_friends_retweets = $this->includeFriendRetweets;
+		$configObject->grab_tweets_from_list_id = $this->grabTweetsFromListId;
 
 		$configJson = json_encode($configObject, JSON_PRETTY_PRINT);
 		$result = file_put_contents($configFileName, $configJson);
@@ -129,10 +135,25 @@ class FriendRetweet {
 	public function grabTweets() {
 		$tweets = array();
 		$params = array(
-			"count" => 200, 
-			"trim_user" => true, 
-			"lang" => "en",
-			"exclude_replies" => true);
+			"count" => 200
+		);
+
+		if(!empty($this->grabTweetsFromListId)) {
+			$apiCallName = 'lists/statuses';
+			if($this->verbose) {
+				echo "Pulling from a list.\n";
+			}
+			$params['list_id'] = $this->grabTweetsFromListId;
+		} else {
+			// We are grabbing from home timeline
+			$apiCallName = 'statuses/home_timeline';
+			if($this->verbose) {
+				echo "Pulling from our home timeline.\n";
+			}
+			$params['trim_user'] = true;
+			$params['lang'] = 'en';
+			$params['exclude_replies'] = 'true';
+		}
 
 		$params['include_rts'] = $this->includeFriendRetweets;
 
@@ -140,7 +161,7 @@ class FriendRetweet {
 			$params["since_id"] = $this->mostRecentTweetId;
 		}
 		
-		$searchResults = $this->twitter->get("statuses/home_timeline", $params);
+		$searchResults = $this->twitter->get($apiCallName, $params);
 
 		$counter = 0;
 		
@@ -156,7 +177,7 @@ class FriendRetweet {
 				}
 
 				if($this->verbose) {
-					echo $text . "\n";
+					echo $tweet->$text . "\n";
 				}
 				
 				$tweets[] = $tweet;
