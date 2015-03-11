@@ -1,6 +1,6 @@
 {
     "name": "decidedly/friend-retweet",
-    "version":"1.0.9",
+    "version":"1.0.10",
     "description": "Automatically retweet tweets of the people we're following",
     "license": "MIT",
     "authors": [

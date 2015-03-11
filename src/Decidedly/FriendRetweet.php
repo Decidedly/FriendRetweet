@@ -218,6 +218,8 @@ class FriendRetweet {
 
 
 				if(!$rejectTweet) {
+					$tweet->text = html_entity_decode($tweet->text, ENT_NOQUOTES);
+
 					if($this->verbose) {
 						echo $tweet->text . "\n";
 					}
